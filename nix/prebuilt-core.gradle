@@ -1,0 +1,26 @@
+// The app builds the legacy native core *inside* its own Gradle build:
+// :OsmAnd:buildOsmAndCore shells out to old-ndk-build.sh, and :OsmAnd:copyOsmAndCoreWithJNI
+// copies the result into libs/. That couples a one-line Java change to a 10-minute
+// ndk-build, so the core is built in its own derivation and its .so files are dropped
+// straight into android/OsmAnd/libs/<abi>/ — already a jniLibs srcDir.
+//
+// Scoped to :OsmAnd on purpose: the OpenGL core's own module has a task by the very
+// same name (:OsmAndCore_androidNative:buildOsmAndCore), and disabling *that* would
+// quietly produce an APK with no renderer.
+//
+// :OsmAnd:cleanupDuplicatesInCore is deliberately left enabled — it moves
+// libs/<abi>/libc++_shared.so to libc++/<abi>/ so it is not packaged twice, and the
+// prebuilt .so files need exactly the same treatment as freshly built ones.
+gradle.projectsEvaluated {
+    def app = gradle.rootProject.findProject(':OsmAnd')
+    if (app == null) {
+        return
+    }
+    ['buildOsmAndCore', 'copyOsmAndCoreWithJNI'].each { name ->
+        def task = app.tasks.findByName(name)
+        if (task != null) {
+            task.enabled = false
+            app.logger.lifecycle("nix: :OsmAnd:${name} disabled — the native core is prebuilt")
+        }
+    }
+}

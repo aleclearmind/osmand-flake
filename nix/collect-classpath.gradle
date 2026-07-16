@@ -1,0 +1,17 @@
+// Hands the OsmAnd-java runtime classpath to Nix.
+//
+// The ring-route planner is plain Java sitting in OsmAnd-java, so a headless CLI
+// only needs that module's jar plus its runtime dependencies — none of the Android
+// app, none of the native cores. Gradle knows that set; this exposes it as a
+// directory we can install.
+gradle.projectsEvaluated {
+    def java = gradle.rootProject.findProject(':OsmAnd-java')
+    if (java == null) {
+        return
+    }
+    java.tasks.register('nixCollectRuntime', Copy) {
+        from java.configurations.runtimeClasspath
+        from java.tasks.named('jar')
+        into new File(java.rootProject.projectDir, 'nix-runtime-libs')
+    }
+}

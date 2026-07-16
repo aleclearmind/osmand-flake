@@ -1,0 +1,78 @@
+// Applied next to nixpkgs' init-deps.gradle, which defines nixDownloadDeps as
+//
+//     configurations.findAll{ it.canBeResolved }.each{ it.resolve() }
+//
+// i.e. it resolves *every* resolvable configuration. That is more than the build
+// needs: MPChartLib's androidTest classpaths are ambiguous under the AGP 8.5.2
+// that prebuild.sh pins, and blow up before anything gets downloaded — even
+// though the release build (`gradle assembleRelease`) never looks at them.
+//
+// Make resolution best-effort. Anything the release build genuinely needs and we
+// failed to capture here will still surface: the offline build simply won't find
+// it, loudly.
+gradle.projectsEvaluated {
+    // AGP pulls some tooling through *detached* configurations created at task
+    // execution time. nixDownloadDeps never walks those, so they never reach
+    // deps.json and the offline build dies looking for them. Declare them here so
+    // they get fetched and locked like every other artifact.
+    //
+    // Two AGP versions are in play: prebuild.sh pins MPAndroidChart to 8.5.2,
+    // while the core wrappers and the app use 8.7.3.
+    //   lint-gradle -> :extractReleaseAnnotations   (version = AGP + 23.0.0)
+    //   aapt2       -> :verifyReleaseResources      (resource compilation)
+    //
+    // Each coordinate gets its OWN configuration: share one and Gradle's conflict
+    // resolution silently keeps only the newest version, so the older one is never
+    // fetched and that project still fails offline.
+    def root = gradle.rootProject
+    def detached = [
+        'com.android.tools.lint:lint-gradle:31.5.2',
+        'com.android.tools.lint:lint-gradle:31.7.3',
+        'com.android.tools.build:aapt2:8.5.2-11315950:linux',
+        'com.android.tools.build:aapt2:8.7.3-12006047:linux',
+    ]
+    detached.eachWithIndex { coord, i ->
+        def name = "nixDetachedDeps${i}"
+        if (!root.configurations.findByName(name)) {
+            root.configurations.create(name).canBeResolved = true
+            root.dependencies.add(name, coord)
+        }
+    }
+
+    gradle.rootProject.allprojects { p ->
+        // These are gradle Download tasks: they pull from builder.osmand.net during
+        // the *build*, not through dependency resolution, so they can never be part
+        // of the lockfile and the offline proxy answers them with a 404. Nix vendors
+        // each file into place instead (see preBuild), leaving nothing to do here.
+        [
+            'collectRegionsInfoResources', // regions.ocbf   -> OsmAnd-java resources
+            'downloadWorldMiniBasemap',    // World_basemap_mini.obf -> assets
+            'downloadStarsDb',             // stars.db.gz -> gunzipped into assets
+        ].each { name ->
+            def download = p.tasks.findByName(name)
+            if (download != null) {
+                download.enabled = false
+            }
+        }
+
+        def task = p.tasks.findByName('nixDownloadDeps')
+        if (task == null) {
+            return
+        }
+
+        task.setActions([])
+        task.doLast {
+            def resolveAll = { configs, kind ->
+                configs.findAll { it.canBeResolved }.each { c ->
+                    try {
+                        c.resolve()
+                    } catch (Exception e) {
+                        p.logger.lifecycle("nix: skipping unresolvable ${kind} configuration ${p.path}:${c.name}")
+                    }
+                }
+            }
+            resolveAll(p.configurations, 'project')
+            resolveAll(p.buildscript.configurations, 'buildscript')
+        }
+    }
+}

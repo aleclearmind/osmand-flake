@@ -1,0 +1,29 @@
+{
+  "src": "sha256-CJ1jgrzh6kmRGGslP7F4/k3sVF0zkl35YBO0DOkGurE=",
+  "externals": {
+    "boost": "sha256-aL5lNPSCdB9LwcSa8slqmBB+yRfEXnU6RnCEYHv78Hw=",
+    "expat": "sha256-Bwohai8fig0mjm1XtlyyFnnu58n1yebwR+uob1zEI6Q=",
+    "freetype": "sha256-c6PfG2HhFYs7RMZVIXUbgPwY243mXFEHDprOBdU/j1A=",
+    "gdal": "sha256-aQ8Qdn1HvSyxoNboRZo6VBNaTL55AZdDhkrigE4w9X0=",
+    "geographiclib": "sha256-3IlvRF/CMizqfd8WMiHpePP/tLhjEGWNnES/csi/tsc=",
+    "giflib": "sha256-tLsrJ3Oq60TxrTgqvfUhETI/pmWNZOju4T/+lNc5GqQ=",
+    "glew": "sha256-AxWz4mftScwegj+YvbbYGQvwtPqIhjtgJuNQx/7HEzk=",
+    "glm": "sha256-2rFUuVk/5cJ1SXC1iICURqWCXwJpgFFKDDoJjqWgweU=",
+    "harfbuzz": "sha256-aj9EiZ0ufobY/YUdyuc6ryS5bKOAgElJrGa3G36JK+8=",
+    "icu4c": "sha256-sYVMi7cOyQrzsUHnwprH57XEfg/OJWaFpyXnbnd4cWg=",
+    "jpeg": "sha256-+cxbmJ520+Lg9oVE8Zw3QrywYt++5jTcm/jWVQaLNS8=",
+    "libarchive": "sha256-cTWq4mG10wciaL8Cemp+vlGkCrtMybYrn3ozdSRYsto=",
+    "libpng": "sha256-+46QQaLiAYo311aonbV1JzLhegr3h90lVAb0MGRiAeM=",
+    "proj": "sha256-dNvwTOQ1AReKrHC/ChjjSC1BSMzMm36QhQVNljUL4VI=",
+    "protobuf": "sha256-btDjqJTxe3ZDbRvHm2yk6u2UpOGnhfed4xO2p/GcuiI=",
+    "qtbase-android": "sha256-QhpDAnVGgR7GoCyggTbWvoTaBM/ArDia8mOp3kk8V8w=",
+    "skia": "sha256-lyqtnXgfG3M+kPjlCPHT+v5tpV4ADM3GcVd9Wy7CccU=",
+    "sqlite": "sha256-hzFhHqo0rUW8tOkXc2vr/1w6ZWeCGWSKSlU1Ms5k6bQ=",
+    "zlib": "sha256-JpCLNULQtSBvWrlGpzJPo8+TdbMfdpkINQbkIqLqB+s=",
+    "legacy-gdal": "sha256-eJkVn8dtLmHYKJFn+ZU0KlGB01HIuuO5JfT8DMSlPQ8=",
+    "legacy-proj": "sha256-nBviUSYuDNDTF3vZhNrgo5tZ4ZJG1k2MoxhysnJl6Mc=",
+    "legacy-protobuf": "sha256-nQgnDToy6Xi6D3p4jyZ3UZ7a3OQht1Jve9pIdpyNzz0=",
+    "legacy-skia": "sha256-74rhWU0Is8gcF0wCfW9MeDh12RNtwIa7eagPDxOFUMo=",
+    "legacy-sqlite": "sha256-hzFhHqo0rUW8tOkXc2vr/1w6ZWeCGWSKSlU1Ms5k6bQ="
+  }
+}

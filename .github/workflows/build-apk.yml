@@ -1,0 +1,177 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [main, master]
+    tags: ["v*"]
+  workflow_dispatch:
+
+# Allow the workflow to publish releases.
+permissions:
+  contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    # One runner per ABI, in parallel: each compiles its own native OpenGL core
+    # (~45 min) and would otherwise crowd a single runner's disk and time budget.
+    # fail-fast off so a stumble on one ABI still ships the other.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - abi: arm64-v8a
+            attr: .#apk
+          # The x86 flavour's abiFilters carry x86 *and* x86_64, so this one APK
+          # is what an x86_64 device or emulator installs.
+          - abi: x86_64
+            attr: .#apk-x86
+    name: Build ${{ matrix.abi }} APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The Nix build compiles OsmAnd's native OpenGL core (C++/Qt via NDK+CMake)
+      # and pulls a full Android SDK — far more than the runner's stock free space.
+      - name: Free up disk space
+        run: |
+          sudo rm -rf \
+            /usr/share/dotnet \
+            /usr/local/lib/android \
+            /opt/ghc /usr/local/.ghcup \
+            /opt/hostedtoolcache \
+            /usr/local/share/boost \
+            "$AGENT_TOOLSDIRECTORY" || true
+          df -h /
+
+      # The native core link (gen of the .so's, plus Gradle/Kotlin) peaks above the
+      # hosted runner's RAM; when it does the kernel OOM-kills the build and the job
+      # dies with a bare "the runner has received a shutdown signal" and no build
+      # error. A large swap file on the roomy /mnt disk absorbs that peak. `free -h`
+      # is logged so a future stall is diagnosable from the run itself.
+      - name: Add swap headroom
+        run: |
+          sudo swapoff -a || true
+          sudo rm -f /mnt/swapfile
+          sudo fallocate -l 13G /mnt/swapfile
+          sudo chmod 600 /mnt/swapfile
+          sudo mkswap /mnt/swapfile
+          sudo swapon /mnt/swapfile
+          free -h
+
+      - name: Install Nix
+        run: |
+          sh <(curl -L https://nixos.org/nix/install) --no-daemon
+          echo "$HOME/.nix-profile/bin" >> "$GITHUB_PATH"
+          echo "NIX_CONFIG=experimental-features = nix-command flakes" >> "$GITHUB_ENV"
+
+      - name: Build the ${{ matrix.abi }} APK
+        run: |
+          # Log memory/swap/disk every 15s. If the runner is still killed with no
+          # build error, the last lines reveal which resource hit the wall. /dev/shm
+          # is watched alongside mem/swap/root: it is a RAM-backed tmpfs (~half of
+          # RAM) that Gradle/NDK scratch can silently exhaust ("No space left on
+          # device") while mem, swap and the root disk all still show headroom — the
+          # exact stall a sibling gradle build hit, which a mem/swap/root-only
+          # monitor cannot see. This build keeps its scratch on $TMPDIR (on disk),
+          # so shm should stay flat; a drop here would point straight at the culprit.
+          ( while :; do
+              printf '[resources] %s  ' "$(date +%T)"
+              free -m | awk '/Mem:/{printf "mem %d/%d MB  ",$3,$2} /Swap:/{printf "swap %d/%d MB  ",$3,$2}'
+              df -m --output=avail /dev/shm | tail -1 | awk '{printf "shm free %d MB  ",$1}'
+              df -m --output=avail /        | tail -1 | awk '{printf "root free %d MB\n",$1}'
+              sleep 15
+            done ) &
+          monitor=$!
+          nix build ${{ matrix.attr }} -L --print-build-logs
+          kill "$monitor" 2>/dev/null || true
+
+      # The F-Droid *release* task has no signing config, so the APK comes out
+      # UNSIGNED — which no device will install. Sign it here: the keystore
+      # (ANDROID_KEYSTORE_BASE64) and its password (ANDROID_KEYSTORE_PASSWORD) come
+      # from repo secrets; the alias is read from the keystore itself so the same
+      # secret works whatever it was minted for. apksigner/keytool read the password
+      # from the env (not argv) so it never lands in the process list. When the secret
+      # is absent (e.g. a PR from a fork) it falls back to a throwaway debug key, so the
+      # artifact is still installable and CI stays green.
+      - name: Sign & stage the APK
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          mkdir -p dist
+          cp -L result/*.apk dist/
+          # java for keytool/apksigner; zipalign + apksigner from the flake's Android SDK.
+          export PATH="$(nix build nixpkgs#jdk17 --no-link --print-out-paths)/bin:$PATH"
+          BT="$(nix build .#androidSdk --no-link --print-out-paths)/libexec/android-sdk/build-tools/35.0.0"
+
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "::warning::No ANDROID_KEYSTORE_BASE64 secret — signing with a throwaway debug key."
+            KS="$RUNNER_TEMP/debug.jks"; KS_ALIAS=debug
+            DEBUG_PW=android; export DEBUG_PW
+            keytool -genkeypair -keystore "$KS" -alias "$KS_ALIAS" \
+              -storepass:env DEBUG_PW -keypass:env DEBUG_PW \
+              -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=OsmAnd~~ CI"
+            KS_PASS=pass:android
+          else
+            KS="$RUNNER_TEMP/release.jks"
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$KS"
+            KS_ALIAS=$(keytool -list -keystore "$KS" -storepass:env ANDROID_KEYSTORE_PASSWORD \
+              | awk -F', ' '/PrivateKeyEntry/{print $1; exit}')
+            [ -n "$KS_ALIAS" ] || { echo "::error::no PrivateKeyEntry in the keystore"; exit 1; }
+            KS_PASS=env:ANDROID_KEYSTORE_PASSWORD
+          fi
+
+          for apk in dist/*.apk; do
+            "$BT/zipalign" -p -f 4 "$apk" "$apk.aligned"
+            mv "$apk.aligned" "$apk"
+            "$BT/apksigner" sign \
+              --ks "$KS" \
+              --ks-key-alias "$KS_ALIAS" \
+              --ks-pass "$KS_PASS" \
+              --key-pass "$KS_PASS" \
+              "$apk"
+            "$BT/apksigner" verify --verbose --print-certs "$apk"
+          done
+          rm -f "$KS"
+          ls -l dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apk-${{ matrix.abi }}
+          path: dist/*.apk
+          if-no-files-found: error
+
+  release:
+    needs: [apk]
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # No `name:` — pull every apk-* artifact from this run (arm64-v8a + x86_64).
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Publish release (arm64-v8a + x86_64 APKs)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p dist
+          cp artifacts/apk-*/*.apk dist/
+          ls -l dist
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            TAG="$GITHUB_REF_NAME"; PRERELEASE=""; TITLE="OsmAnd~~ $TAG"
+          else
+            TAG="latest"; PRERELEASE="--prerelease"; TITLE="OsmAnd~~ (latest build)"
+            gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
+          fi
+          gh release create "$TAG" dist/* \
+            $PRERELEASE \
+            --target "$GITHUB_SHA" \
+            --title "$TITLE" \
+            --notes "Automated APKs: arm64-v8a (\`nix build .#apk\`) and x86_64 (\`nix build .#apk-x86\`). Commit \`$GITHUB_SHA\`."

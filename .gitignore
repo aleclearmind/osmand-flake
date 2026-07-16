@@ -1,0 +1,13 @@
+# build outputs and caches — none of this is source
+result
+result-*
+dev/
+src/
+data/
+gcroots/
+shots/
+*.apk
+*.apk.idsig
+*.log
+.avd/
+.keys/
