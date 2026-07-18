@@ -249,7 +249,7 @@ let
   # Same story for the app's two other Download tasks, whose outputs are packaged as
   # assets (build-common.gradle wires build/generated/osmand/assets as an assets srcDir).
   worldBasemapMini = pkgs.fetchurl {
-    url = "https://builder.osmand.net/basemap/World_basemap_mini_2.obf";
+    url = "https://builder.osmand.net/basemap/release/2026-06/World_basemap_mini_2.obf";
     hash = "sha256-EWbmd4N65zlv+PTorFMmK0t6OeQgUj9zN8G1XsZQMnQ=";
   };
 
