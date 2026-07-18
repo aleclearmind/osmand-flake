@@ -126,13 +126,22 @@ stdenv.mkDerivation (
       gzip -dc ${starsDb} > android/OsmAnd/build/generated/osmand/assets/astro/stars.db
 
       ${gradleProps}
+
+      # Gradle otherwise gives its build daemon only the small default heap. That is
+      # marginal for Zipflinger when the x86 flavour packages both x86 and x86_64, and
+      # has failed nondeterministically in CI even with plenty of system RAM available.
+      # Keep this APK-only: putting it in gradleProps would also invalidate the native
+      # core and MPAndroidChart derivations.
+      echo "org.gradle.jvmargs=-Xmx2g -Dfile.encoding=UTF-8" \
+        >> "$GRADLE_USER_HOME/gradle.properties"
     '';
 
     buildPhase = ''
       runHook preBuild
 
       # fdroidserver `gradle:` — run in subdir android/OsmAnd
-      ( cd android/OsmAnd && gradle ${versions.gradleTask} )
+      # Preserve the nested AGP/Zipflinger exception in CI if packaging ever fails again.
+      ( cd android/OsmAnd && gradle --stacktrace ${versions.gradleTask} )
 
       runHook postBuild
     '';
