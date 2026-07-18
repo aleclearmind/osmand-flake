@@ -16,9 +16,45 @@
         "type": "github"
       }
     },
+    "osmand-android": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784240917,
+        "narHash": "sha256-ju1+pS7O8lb3/PNx9WwChsQcwknAHTmn6TCMODVUkMg=",
+        "owner": "aleclearmind",
+        "repo": "OsmAnd",
+        "rev": "941c4c614585dc5363e6f9479beb3574e3e2f178",
+        "type": "github"
+      },
+      "original": {
+        "owner": "aleclearmind",
+        "ref": "osmand-flake-5.3.10",
+        "repo": "OsmAnd",
+        "type": "github"
+      }
+    },
+    "osmand-core-legacy": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784239882,
+        "narHash": "sha256-hJrdNhUq6MDezlpfxH1eSv5BN17crCTtEPWeaTWscKQ=",
+        "owner": "aleclearmind",
+        "repo": "OsmAnd-core-legacy",
+        "rev": "e83dd53eb2c7d82166fef583c2c2ccaff2f61003",
+        "type": "github"
+      },
+      "original": {
+        "owner": "aleclearmind",
+        "ref": "osmand-flake-5.3.10",
+        "repo": "OsmAnd-core-legacy",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs",
+        "osmand-android": "osmand-android",
+        "osmand-core-legacy": "osmand-core-legacy"
       }
     }
   },
