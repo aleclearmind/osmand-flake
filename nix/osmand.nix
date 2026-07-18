@@ -21,6 +21,8 @@
   sdkRoot,
   ndkRoot,
   versions,
+  appName,
+  applicationId,
   prepared,
   plugins ? [ ],
   coreOpengl,
@@ -35,7 +37,8 @@
 }:
 
 stdenv.mkDerivation (
-  finalAttrs: {
+  finalAttrs:
+  {
     pname = "osmand";
     version = versions.versionName;
 
@@ -62,7 +65,22 @@ stdenv.mkDerivation (
       "${./prebuilt-core.gradle}"
     ];
 
-    postPatch = lib.concatMapStrings (p: ''
+    postPatch = ''
+      # The Java namespace remains net.osmand.plus, but Android installation identity
+      # is the Gradle applicationId. The provider authority must follow it as well or
+      # Android rejects side-by-side installation because provider authorities are
+      # globally unique on a device.
+      substituteInPlace android/OsmAnd/build.gradle \
+        --replace-fail 'applicationId "net.osmand.plus"' 'applicationId "${applicationId}"'
+      ${lib.optionalString (appName != versions.appName) ''
+        substituteInPlace android/OsmAnd/build.gradle \
+          --replace-fail '"${versions.appName}"' '"${appName}"'
+      ''}
+      substituteInPlace android/OsmAnd/AndroidManifest.xml \
+        --replace-fail 'android:authorities="net.osmand.plus.fileprovider"' \
+          'android:authorities="${applicationId}.fileprovider"'
+    ''
+    + lib.concatMapStrings (p: ''
       cp -r ${p.src}/java/. android/OsmAnd-java/src/main/java/
       cp -r ${p.src}/app/.  android/OsmAnd/src/
       if [ -d "${p.src}/res" ]; then cp -r ${p.src}/res/. android/OsmAnd/res/; fi
@@ -137,7 +155,7 @@ stdenv.mkDerivation (
     dontFixup = true;
 
     meta = {
-      description = "${versions.appName} — OsmAnd ${versions.versionName}, built the F-Droid way";
+      description = "${appName} — OsmAnd ${versions.versionName}, built the F-Droid way";
       homepage = "https://osmand.net";
       license = lib.licenses.gpl3Only;
       platforms = [ "x86_64-linux" ];

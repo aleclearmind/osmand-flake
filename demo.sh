@@ -11,6 +11,7 @@
 # were thrown away over one early tap.
 set -e
 ROOT="$(cd "$(dirname "$0")" && pwd)"
+PKG="${APPLICATION_ID:-io.github.aleclearmind.osmand}"
 SDK="$(readlink -f "$ROOT/gcroots/emulator-sdk")/libexec/android-sdk"
 export PATH="$SDK/platform-tools:$PATH"
 OUT="$ROOT/shots/rec"
@@ -67,8 +68,8 @@ swipe_options() { for _ in 1 2 3 4; do adb shell input swipe 260 470 60 470 300;
 ensure_map() {
 	for _ in $(seq 1 5); do
 		adb shell dumpsys activity activities 2>/dev/null \
-			| grep -q "topResumedActivity.*net\.osmand\.plus" && return 0
-		adb shell monkey -p net.osmand.plus -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
+			| grep -Fq "$PKG" && return 0
+		adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
 		sleep 8
 	done
 	echo "!! could not get back to the map" >&2
@@ -105,8 +106,8 @@ open_drawer() {
 # bar, so a later hamburger tap hits the card instead of the drawer. Part 1 wants the pin;
 # part 2 wants the bottom bar, and gets the restored view (still Rassa) instead.
 open_map() {
-	adb shell am force-stop net.osmand.plus
-	adb shell monkey -p net.osmand.plus -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
+	adb shell am force-stop "$PKG"
+	adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
 	sleep 14
 	if [ "${1:-}" = pin ]; then
 		adb shell am start -a android.intent.action.VIEW -d "geo:45.76847,8.01307?z=14" >/dev/null 2>&1

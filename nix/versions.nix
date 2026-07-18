@@ -35,4 +35,6 @@
 
   # The name F-Droid ships is "OsmAnd~". Ours carries the extra tilde.
   appName = "OsmAnd~~";
+  # Installation identity, deliberately distinct from F-Droid's net.osmand.plus.
+  applicationId = "io.github.aleclearmind.osmand";
 }

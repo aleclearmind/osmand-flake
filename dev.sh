@@ -18,7 +18,8 @@
 # java/, app/, optionally res/, plus $PLUGIN_CLASS to register. Unset, this builds plain OsmAnd~~
 # with the in-tree ring route, which is what you want when working on the forks themselves. A flake
 # layering its own plugin calls this with both set — one dev loop, and it registers a plugin the
-# same way mkApk does, so the two cannot drift.
+# same way mkApk does, so the two cannot drift. Such a consumer can also set $APP_NAME and
+# $APPLICATION_ID to match its mkApk identity.
 #
 #   nix develop -c ./dev.sh          # build, sign, install on the running emulator
 #   nix develop -c ./dev.sh --setup  # re-materialise dev/ from scratch (after a nix bump)
@@ -29,7 +30,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 DEV="$ROOT/dev"
 TASK="assembleAndroidFullOpenglX86Release"
-PKG="net.osmand.plus"
+APP_NAME="${APP_NAME:-OsmAnd~~}"
+PKG="${APPLICATION_ID:-io.github.aleclearmind.osmand}"
 KEYSTORE="$ROOT/.keys/debug.jks"
 PLUGIN_DIR="${PLUGIN_DIR:-}"
 PLUGIN_CLASS="${PLUGIN_CLASS:-}"
@@ -66,6 +68,16 @@ if [ ! -d "$DEV" ]; then
 
 	mkdir -p "$DEV"
 	cp -r --no-preserve=mode,ownership "$prepared"/. "$DEV"/
+
+	# Match the hermetic mkApk branding. The Java packages stay net.osmand.plus;
+	# applicationId is the independently installable Android identity.
+	sed -i \
+		-e 's|applicationId "net.osmand.plus"|applicationId "'"$PKG"'"|g' \
+		-e 's|"OsmAnd~~"|"'"$APP_NAME"'"|' \
+		"$DEV/android/OsmAnd/build.gradle"
+	sed -i \
+		's|android:authorities="net.osmand.plus.fileprovider"|android:authorities="'"$PKG"'.fileprovider"|' \
+		"$DEV/android/OsmAnd/AndroidManifest.xml"
 
 	# Plugins are a hardcoded list. The ring route registers itself in-tree now, so only an
 	# out-of-tree one has to be spliced in, on the same anchor nix/osmand.nix uses.
@@ -128,7 +140,7 @@ apk=$(find "$DEV/android/OsmAnd/build/outputs/apk" -name '*.apk' | head -1)
 # A release build is unsigned; the emulator will not install that.
 if [ ! -f "$KEYSTORE" ]; then
 	keytool -genkeypair -keystore "$KEYSTORE" -alias debug -storepass android -keypass android \
-		-keyalg RSA -keysize 2048 -validity 10000 -dname "CN=OsmAnd~~ dev"
+		-keyalg RSA -keysize 2048 -validity 10000 -dname "CN=$APP_NAME dev"
 fi
 build_tools=$(ls -d "$ANDROID_SDK_ROOT"/build-tools/* | sort -V | tail -1)
 signed="$ROOT/osmand-x86-signed.apk"

@@ -78,8 +78,7 @@ let
     hashes = hashes.externals;
   };
 
-  isExternalFor =
-    prefix: drv: lib.isDerivation drv && lib.hasPrefix "${prefix}/" drv.targetPath;
+  isExternalFor = prefix: drv: lib.isDerivation drv && lib.hasPrefix "${prefix}/" drv.targetPath;
   coreExternals = lib.filter (isExternalFor "core/externals") (lib.attrValues externals);
   legacyExternals = lib.filter (isExternalFor "core-legacy/externals") (lib.attrValues externals);
 
@@ -200,12 +199,18 @@ let
     # so a flake carrying its own plugin can re-run just this gradle step. Everything expensive
     # above is unchanged by a plugin, so those flakes get the cores from the store.
     mkApk =
-      { plugins ? [ ] }:
+      {
+        plugins ? [ ],
+        appName ? versions.appName,
+        applicationId ? versions.applicationId,
+      }:
       pkgs.callPackage ./osmand.nix {
         inherit
           versions
           prepared
           plugins
+          appName
+          applicationId
           coreOpengl
           coreLegacy
           mpchart
@@ -312,7 +317,8 @@ let
   # route.override, which would rebuild the whole gradle derivation each time. `-native` points
   # $OSMAND_NATIVE_LIB at the built core so `--backend native`/`both` need no flags; `transit` is
   # the same tool pinned to --mode public_transport, so the public-transport command still exists.
-  mkWrapper = name: bin: env: flags:
+  mkWrapper =
+    name: bin: env: flags:
     pkgs.runCommandLocal "osmand-${name}-${versions.versionName}"
       {
         nativeBuildInputs = [ pkgs.makeWrapper ];
@@ -322,12 +328,11 @@ let
         makeWrapper ${route}/bin/route "$out/bin/${bin}" ${env} ${flags}
       '';
 
-  routeNative = mkWrapper "route-native" "route"
-    "--set OSMAND_NATIVE_LIB ${coreLegacyLinux}/lib" "";
-  transit = mkWrapper "transit" "transit"
-    "" "--add-flags '--mode public_transport'";
-  transitNative = mkWrapper "transit-native" "transit"
-    "--set OSMAND_NATIVE_LIB ${coreLegacyLinux}/lib" "--add-flags '--mode public_transport'";
+  routeNative = mkWrapper "route-native" "route" "--set OSMAND_NATIVE_LIB ${coreLegacyLinux}/lib" "";
+  transit = mkWrapper "transit" "transit" "" "--add-flags '--mode public_transport'";
+  transitNative =
+    mkWrapper "transit-native" "transit" "--set OSMAND_NATIVE_LIB ${coreLegacyLinux}/lib"
+      "--add-flags '--mode public_transport'";
 
   # The toolchain F-Droid installs with apt, pinned by nix instead:
   #   ant g++ cmake clang build-essential swig python-is-python3 zip
@@ -377,14 +382,12 @@ let
       # Rebuild each FOD with a bogus hash and record the one nix reports.
       json="''${1:-nix/hashes.json}"
       targets=(src ${
-        lib.concatStringsSep " " (
-          map (n: "external-${n}") (builtins.attrNames (lib.filterAttrs (_: lib.isDerivation) externals))
-        )
+        lib.concatStringsSep " " (builtins.attrNames (lib.filterAttrs (_: lib.isDerivation) externals))
       })
 
       for t in "''${targets[@]}"; do
         current=$(jq -r --arg t "$t" '
-          if $t == "src" then .src else .externals[$t | sub("^external-";"")] end' "$json")
+          if $t == "src" then .src else .externals[$t] end' "$json")
         if [ "$current" != "${lib.fakeHash}" ]; then
           echo "$t: already pinned"
           continue
@@ -398,7 +401,7 @@ let
         if [ "$t" = src ]; then
           jq --arg h "$got" '.src = $h' "$json" > "$json.tmp"
         else
-          jq --arg n "''${t#external-}" --arg h "$got" '.externals[$n] = $h' "$json" > "$json.tmp"
+          jq --arg n "$t" --arg h "$got" '.externals[$n] = $h' "$json" > "$json.tmp"
         fi
         mv "$json.tmp" "$json"
         echo "$t: $got"

@@ -75,7 +75,6 @@
           icu4j
           androidSdk
           emulatorSdk
-          externals
           worldBasemapMini
           starsDb
           ;
@@ -84,11 +83,9 @@
         "route-native" = osmand.routeNative;
         "transit-native" = osmand.transitNative;
       }
-      # expose each vendored external individually: nix build .#external-skia
+      # Expose each vendored external as an ordinary package: nix build .#skia.
       # (callPackage tacks an `override` function onto the set; keep only derivations)
-      // pkgs.lib.mapAttrs' (n: v: pkgs.lib.nameValuePair "external-${n}" v) (
-        pkgs.lib.filterAttrs (_: pkgs.lib.isDerivation) osmand.externals
-      );
+      // pkgs.lib.filterAttrs (_: pkgs.lib.isDerivation) osmand.externals;
 
       # The seam for flakes that add a plugin of their own — OsmAnd~~ plus something we would not
       # ship here. Adding a plugin means re-running the app's gradle step over different sources,
@@ -97,6 +94,8 @@
       # flake's store paths, so they never rebuild Qt.
       #
       #   osmand-flake.lib.x86_64-linux.mkApk {
+      #     appName = "OsmAnd~~~";
+      #     applicationId = "io.github.example.osmand.myplugin";
       #     plugins = [ { src = ./plugin; class = "net.osmand.plus.plugins.mine.MyPlugin"; } ];
       #   }
       #

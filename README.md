@@ -10,6 +10,9 @@ nix run   .#route        # headless router: road, transit, GPX-approx (Java + na
 nix develop              # the exact toolchain F-Droid uses
 ```
 
+CI signing and release-key setup are delegated to
+[`nix-android-ci`](https://github.com/aleclearmind/nix-android-ci#signing-keys).
+
 ## What it builds
 
 The recipe is a faithful port of
@@ -26,7 +29,10 @@ last `Builds:` entry:
 
 `prebuild.sh` and `build.sh` are run **unmodified**, so all of F-Droid's
 de-Googling (billing, play-services, Huawei, ANT+) happens exactly as it does
-upstream. The only thing changed on top is the app name: `OsmAnd~` → `OsmAnd~~`.
+upstream. The final APK is branded `OsmAnd~~` with application ID
+`io.github.aleclearmind.osmand`, rather than F-Droid's `OsmAnd~` /
+`net.osmand.plus`. Its provider authorities follow that ID, so both apps can be
+installed side-by-side with separate Android data and upgrade histories.
 
 Both native cores are compiled from source: the OpenGL core
 (`libOsmAndCoreWithJNI.so` — Qt5, Skia, GDAL, Boost, ICU4C) and the legacy core
@@ -155,6 +161,8 @@ calls the two functions it exports:
     let osmand = osmand-flake.lib.x86_64-linux; in {
       packages.x86_64-linux = {
         apk = osmand.mkApk {
+          appName = "OsmAnd My Plugin";
+          applicationId = "io.github.example.osmand.myplugin";
           plugins = [ { src = ./plugin; class = "net.osmand.plus.plugins.mine.MyPlugin"; } ];
         };
         mytool = osmand.mkJavaCli {
@@ -169,8 +177,9 @@ calls the two functions it exports:
 `plugin/` holds `java/` (compiled into OsmAnd-java), `app/` (into the app) and optionally `res/`.
 Only the app's gradle step re-runs — the cores, MPChart and ICU4J are unchanged by a plugin and come
 straight from this flake's store paths, so Qt never rebuilds. Declaring your own `nixpkgs` is what
-breaks that; take this flake's. `dev.sh` covers the same case: set `$PLUGIN_DIR` and `$PLUGIN_CLASS`
-and it registers the plugin exactly as `mkApk` does.
+breaks that; take this flake's. Give every independently installed variant its own `appName` and
+`applicationId`. `dev.sh` covers the same case: set `$PLUGIN_DIR`, `$PLUGIN_CLASS`, `$APP_NAME`, and
+`$APPLICATION_ID`, and it registers and brands the plugin exactly as `mkApk` does.
 
 To work on either fork, point the inputs at a local clone — no commit, no push, no `flake.lock`
 churn. `./local.sh` is that, spelled once:
