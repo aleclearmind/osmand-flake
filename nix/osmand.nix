@@ -128,11 +128,11 @@ stdenv.mkDerivation (
       ${gradleProps}
 
       # Gradle otherwise gives its build daemon only the small default heap. That is
-      # marginal for Zipflinger when the x86 flavour packages both x86 and x86_64, and
-      # has failed nondeterministically in CI even with plenty of system RAM available.
+      # marginal for D8 and Zipflinger when the x86 flavour packages both x86 and x86_64,
+      # and has failed nondeterministically in CI even with plenty of system RAM available.
       # Keep this APK-only: putting it in gradleProps would also invalidate the native
       # core and MPAndroidChart derivations.
-      echo "org.gradle.jvmargs=-Xmx2g -Dfile.encoding=UTF-8" \
+      echo "org.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8" \
         >> "$GRADLE_USER_HOME/gradle.properties"
     '';
 
