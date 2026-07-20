@@ -49,13 +49,51 @@
         androidSrc = osmand-android;
         coreLegacySrc = osmand-core-legacy;
       };
+
+      ciApk =
+        abi: package:
+        pkgs.runCommand "osmand-${osmand.versions.versionName}-${abi}.apk"
+          {
+            __structuredAttrs = true;
+            ci = [
+              { action = "sign-apk"; }
+              { action = "release"; }
+            ];
+          }
+          ''
+            mapfile -t apks < <(find ${package} -maxdepth 1 -type f -name '*.apk' -print)
+            if [ "''${#apks[@]}" -ne 1 ]; then
+              echo "expected exactly one APK in ${package}, found ''${#apks[@]}" >&2
+              printf '  %s\n' "''${apks[@]}" >&2
+              exit 1
+            fi
+            cp "''${apks[0]}" "$out"
+          '';
+
+      ciRun =
+        package:
+        package.overrideAttrs (_: {
+          __structuredAttrs = true;
+          ci = [ { action = "run"; } ];
+        });
+
+      apk = ciApk "arm64-v8a" osmand.apk;
+      apk-x86 = ciApk "x86_64" osmand.apk-x86;
+      routeTest = ciRun osmand.routeTest;
+      transitTest = ciRun osmand.transitTest;
     in
     {
       packages.${system} = {
-        default = osmand.apk;
-        inherit (osmand)
+        default = apk;
+        inherit
           apk
           apk-x86
+          routeTest
+          transitTest
+          ;
+        "route-test" = routeTest;
+        "transit-test" = transitTest;
+        inherit (osmand)
           prepared-x86
           coreOpengl-x86
           coreLegacy-x86
@@ -137,7 +175,7 @@
         # Road-routing acceptance test (fetches the Piemonte map): `nix run .#route-test`
         route-test = {
           type = "app";
-          program = "${osmand.routeTest}/bin/route-test";
+          program = "${routeTest}/bin/route-test";
         };
 
         # `transit` is the routing CLI pinned to --mode public_transport (so the command still exists):
@@ -157,7 +195,7 @@
         # Fetch the current Piemonte map and plan a Turin transit trip (pure-Java): `nix run .#transit-test`
         transit-test = {
           type = "app";
-          program = "${osmand.transitTest}/bin/transit-test";
+          program = "${transitTest}/bin/transit-test";
         };
 
         # The differential check: plan the same trip with both engines and assert they agree.
