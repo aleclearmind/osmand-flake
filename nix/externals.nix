@@ -30,6 +30,7 @@
   python3,
   src,
   hashes,
+  versions,
 }:
 
 let
@@ -74,7 +75,7 @@ let
     in
     stdenvNoCC.mkDerivation {
       pname = "osmand-external-${attr}";
-      version = "5.3.10";
+      version = versions.versionName;
 
       nativeBuildInputs = [
         bash
@@ -144,17 +145,22 @@ let
       meta.description = "OsmAnd ${dir} external: ${name} (downloaded + patched)";
     };
 
-  core = lib.genAttrs coreNames (name: mkExternal {
-    inherit name;
-    dir = "core/externals";
-  });
-
-  legacy = lib.listToAttrs (map (name: {
-    name = "legacy-${name}";
-    value = mkExternal {
+  core = lib.genAttrs coreNames (
+    name:
+    mkExternal {
       inherit name;
-      dir = "core-legacy/externals";
-    };
-  }) legacyNames);
+      dir = "core/externals";
+    }
+  );
+
+  legacy = lib.listToAttrs (
+    map (name: {
+      name = "legacy-${name}";
+      value = mkExternal {
+        inherit name;
+        dir = "core-legacy/externals";
+      };
+    }) legacyNames
+  );
 in
 core // legacy

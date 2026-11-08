@@ -1,10 +1,10 @@
 {
-  "src": "sha256-CJ1jgrzh6kmRGGslP7F4/k3sVF0zkl35YBO0DOkGurE=",
+  "src": "sha256-IlUuQ2BJMv0GYN9ahlQ9Bw8XyuTA8nqj8rCkCASCSyw=",
   "externals": {
     "boost": "sha256-aL5lNPSCdB9LwcSa8slqmBB+yRfEXnU6RnCEYHv78Hw=",
     "expat": "sha256-Bwohai8fig0mjm1XtlyyFnnu58n1yebwR+uob1zEI6Q=",
     "freetype": "sha256-c6PfG2HhFYs7RMZVIXUbgPwY243mXFEHDprOBdU/j1A=",
-    "gdal": "sha256-aQ8Qdn1HvSyxoNboRZo6VBNaTL55AZdDhkrigE4w9X0=",
+    "gdal": "sha256-FDnG+NjfnTvi2iYrai2PO47GGSESoQeV1QUhXg3IuJk=",
     "geographiclib": "sha256-3IlvRF/CMizqfd8WMiHpePP/tLhjEGWNnES/csi/tsc=",
     "giflib": "sha256-tLsrJ3Oq60TxrTgqvfUhETI/pmWNZOju4T/+lNc5GqQ=",
     "glew": "sha256-AxWz4mftScwegj+YvbbYGQvwtPqIhjtgJuNQx/7HEzk=",
@@ -23,7 +23,7 @@
     "legacy-gdal": "sha256-eJkVn8dtLmHYKJFn+ZU0KlGB01HIuuO5JfT8DMSlPQ8=",
     "legacy-proj": "sha256-nBviUSYuDNDTF3vZhNrgo5tZ4ZJG1k2MoxhysnJl6Mc=",
     "legacy-protobuf": "sha256-nQgnDToy6Xi6D3p4jyZ3UZ7a3OQht1Jve9pIdpyNzz0=",
-    "legacy-skia": "sha256-74rhWU0Is8gcF0wCfW9MeDh12RNtwIa7eagPDxOFUMo=",
+    "legacy-skia": "sha256-JP6KqK1NcDjBgY29ivCqBbIwAndK/U2zzjY9/Ka7Iw4=",
     "legacy-sqlite": "sha256-hzFhHqo0rUW8tOkXc2vr/1w6ZWeCGWSKSlU1Ms5k6bQ="
   }
 }

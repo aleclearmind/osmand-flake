@@ -19,16 +19,16 @@
     "osmand-android": {
       "flake": false,
       "locked": {
-        "lastModified": 1784240917,
-        "narHash": "sha256-ju1+pS7O8lb3/PNx9WwChsQcwknAHTmn6TCMODVUkMg=",
+        "lastModified": 1794177458,
+        "narHash": "sha256-tRGDBVWWfAc305W9Je5m8PR4zozQIQxcHfiw9x/cl7Q=",
         "owner": "aleclearmind",
         "repo": "OsmAnd",
-        "rev": "941c4c614585dc5363e6f9479beb3574e3e2f178",
+        "rev": "155a837e3c89f8bfffb3c982bdb37cefbeb15517",
         "type": "github"
       },
       "original": {
         "owner": "aleclearmind",
-        "ref": "osmand-flake-5.3.10",
+        "ref": "osmand-flake-5.4.11",
         "repo": "OsmAnd",
         "type": "github"
       }
@@ -36,16 +36,16 @@
     "osmand-core-legacy": {
       "flake": false,
       "locked": {
-        "lastModified": 1784239882,
-        "narHash": "sha256-hJrdNhUq6MDezlpfxH1eSv5BN17crCTtEPWeaTWscKQ=",
+        "lastModified": 1794177458,
+        "narHash": "sha256-CR5cjV3ZiWtY141qJ4tidKNIDduXI2IECRBTaU3CEUY=",
         "owner": "aleclearmind",
         "repo": "OsmAnd-core-legacy",
-        "rev": "e83dd53eb2c7d82166fef583c2c2ccaff2f61003",
+        "rev": "f03986ebde74f7421afadc05a95087db25b1611c",
         "type": "github"
       },
       "original": {
         "owner": "aleclearmind",
-        "ref": "osmand-flake-5.3.10",
+        "ref": "osmand-flake-5.4.11",
         "repo": "OsmAnd-core-legacy",
         "type": "github"
       }

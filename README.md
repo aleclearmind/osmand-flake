@@ -4,7 +4,7 @@ OsmAnd built the way F-Droid builds it, hermetically, from a Nix flake — plus 
 **ring route** plugin that plans a closed-loop walk under constraints.
 
 ```
-nix build .#apk          # OsmAnd~~ 5.3.10, arm64/OpenGL, unsigned APK
+nix build .#apk          # OsmAnd~~ 5.4.11, arm64/OpenGL, unsigned APK
 nix build .#looproute    # headless ring-route planner (no Android needed)
 nix run   .#route        # headless router: road, transit, GPX-approx (Java + native)
 nix develop              # the exact toolchain F-Droid uses
@@ -19,12 +19,16 @@ The recipe is a faithful port of
 [`metadata/net.osmand.plus.yml`](https://gitlab.com/fdroid/fdroiddata/-/blob/master/metadata/net.osmand.plus.yml),
 last `Builds:` entry:
 
+The pinned release is **5.4.11**, the newest version distributed by F-Droid as of
+2026-11-08. F-Droid marks it as beta and still recommends 5.4.10.
+
 | | |
 |---|---|
-| source | `gitlab.com/f-droid-mirrors/OsmAnd-submodules` @ `v5.3.10` (submodules) |
+| source | `gitlab.com/f-droid-mirrors/OsmAnd-submodules` @ `v5.4.11` (`0bcbf3d414fb47fd574be37b70697121257a952b`, submodules) |
 | …except | `android` → `aleclearmind/OsmAnd`, `core-legacy` → `aleclearmind/OsmAnd-core-legacy` |
-| variant | `assembleAndroidFullOpenglArm64Release` (versionCode **531003**) |
+| variant | `assembleAndroidFullOpenglArm64Release` (versionCode **541103**) |
 | NDK | r28c (`28.2.13676358`) |
+| app toolchain | Android API/build-tools 36, AGP 8.10.1, Kotlin 2.1.20, JDK 21 |
 | steps | F-Droid's `rm:` → `prebuild.sh` → `build.sh` → `gradle` |
 
 `prebuild.sh` and `build.sh` are run **unmodified**, so all of F-Droid's
@@ -91,7 +95,7 @@ to be pinned so the sandbox needs no network.
 |---|---|
 | `core/externals/*/configure.sh` (Qt, Skia, GDAL, Boost, ICU4C, proj…) | 19 FODs, `nix/hashes.json` |
 | `core-legacy/externals/*/configure.sh` | 5 more FODs |
-| Gradle/Maven artifacts | `nix/deps.json` (838 artifacts), replayed by `mitm-cache` |
+| Gradle/Maven artifacts | `nix/deps.json`, replayed by `mitm-cache` |
 | `World_basemap_mini_2.obf`, `stars.db.gz` | `fetchurl`, pinned |
 | `regions.ocbf` | **vendored** — see below |
 | `sdkmanager "platforms;android-31"` | provided by `androidenv` |
@@ -100,7 +104,7 @@ Regenerate the two lockfiles after a version bump:
 
 ```
 nix run .#update-hashes                              # nix/hashes.json
-nix build .#apk.mitmCache.updateScript && ./result   # nix/deps.json
+nix run .#update-deps                              # nix/deps.json
 ```
 
 `regions.ocbf` is the one input that cannot be pinned by hash: `builder.osmand.net`
@@ -137,8 +141,8 @@ still comes from the mirror at the tag.
 
 | | fork | holds |
 |---|---|---|
-| `osmand-android` | `aleclearmind/OsmAnd` @ `osmand-flake-5.3.10` | the app, `OsmAnd-java`, the ring-route plugin, the routing CLI |
-| `osmand-core-legacy` | `aleclearmind/OsmAnd-core-legacy` @ `osmand-flake-5.3.10` | `libosmand.so` — the native router the app and the CLI both load |
+| `osmand-android` | `aleclearmind/OsmAnd` @ `osmand-flake-5.4.11` | the app, `OsmAnd-java`, the ring-route plugin, the routing CLI |
+| `osmand-core-legacy` | `aleclearmind/OsmAnd-core-legacy` @ `osmand-flake-5.4.11` | `libosmand.so` — the native router the app and the CLI both load |
 
 Both branches are cut from the exact commits the mirror pins, so an untouched fork builds the same
 bytes F-Droid would — which is what makes "did our fork break it?" a question with an answer.

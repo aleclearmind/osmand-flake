@@ -18,6 +18,8 @@
   gradle,
   jdk21,
   androidSdk,
+  dependencySdk,
+  dependencyGradleProps,
   sdkRoot,
   ndkRoot,
   versions,
@@ -51,7 +53,24 @@ stdenv.mkDerivation (
     ];
 
     mitmCache = gradle.fetchDeps {
-      pkg = finalAttrs.finalPackage;
+      # Resolving Maven dependencies needs the Gradle settings, but not the native
+      # artifacts. Otherwise updating this lock tries to build the cores with the
+      # old dependency lock before it can record the new one.
+      pkg = finalAttrs.finalPackage.overrideAttrs (_: {
+        nativeBuildInputs = [
+          gradle
+          jdk21
+          dependencySdk
+        ];
+        ANDROID_HOME = "${dependencySdk}/libexec/android-sdk";
+        ANDROID_SDK_ROOT = "${dependencySdk}/libexec/android-sdk";
+        ANDROID_SDK = "${dependencySdk}/libexec/android-sdk";
+        ANDROID_NDK = "";
+        ANDROID_NDK_HOME = "";
+        ANDROID_NDK_ROOT = "";
+        preBuild = dependencyGradleProps;
+        gradleUpdateTask = "-p android/OsmAnd nixDownloadDeps";
+      });
       data = ./deps.json;
     };
 

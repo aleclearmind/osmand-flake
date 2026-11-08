@@ -1,3 +1,5 @@
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+
 // Applied next to nixpkgs' init-deps.gradle, which defines nixDownloadDeps as
 //
 //     configurations.findAll{ it.canBeResolved }.each{ it.resolve() }
@@ -16,8 +18,8 @@ gradle.projectsEvaluated {
     // deps.json and the offline build dies looking for them. Declare them here so
     // they get fetched and locked like every other artifact.
     //
-    // Two AGP versions are in play: prebuild.sh pins MPAndroidChart to 8.5.2,
-    // while the core wrappers and the app use 8.7.3.
+    // MPAndroidChart uses AGP 8.5.2, the core wrappers use 8.7.3, and the app
+    // uses 8.10.1. Keep each version's detached tooling available offline.
     //   lint-gradle -> :extractReleaseAnnotations   (version = AGP + 23.0.0)
     //   aapt2       -> :verifyReleaseResources      (resource compilation)
     //
@@ -28,8 +30,10 @@ gradle.projectsEvaluated {
     def detached = [
         'com.android.tools.lint:lint-gradle:31.5.2',
         'com.android.tools.lint:lint-gradle:31.7.3',
+        'com.android.tools.lint:lint-gradle:31.10.1',
         'com.android.tools.build:aapt2:8.5.2-11315950:linux',
         'com.android.tools.build:aapt2:8.7.3-12006047:linux',
+        'com.android.tools.build:aapt2:8.10.1-12782657:linux',
     ]
     detached.eachWithIndex { coord, i ->
         def name = "nixDetachedDeps${i}"
@@ -65,9 +69,20 @@ gradle.projectsEvaluated {
             def resolveAll = { configs, kind ->
                 configs.findAll { it.canBeResolved }.each { c ->
                     try {
-                        c.resolve()
+                        // Record Maven artifacts only. AGP's project components
+                        // expose several artifact types (classes, resources, AAR),
+                        // so resolving their unqualified files is ambiguous. They
+                        // are built locally and do not belong in the Maven lock.
+                        c.incoming.artifactView {
+                            componentFilter { id -> id instanceof ModuleComponentIdentifier }
+                        }.files.files
                     } catch (Exception e) {
-                        p.logger.lifecycle("nix: skipping unresolvable ${kind} configuration ${p.path}:${c.name}")
+                        // Never hide a missing dependency of either shipped APK.
+                        def shipped = p.path == ':OsmAnd' && c.name ==~ /androidFullOpengl(Arm64|X86)Release(Compile|Runtime)Classpath/
+                        if (shipped || c.name.startsWith('nixDetachedDeps')) {
+                            throw e
+                        }
+                        p.logger.lifecycle("nix: skipping unresolvable ${kind} configuration ${p.path}:${c.name}: ${e.message}")
                     }
                 }
             }

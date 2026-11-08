@@ -17,7 +17,7 @@ let
     arm64 = versions;
     x86 = versions // {
       abi = "x86";
-      versionCode = "531002";
+      versionCode = "${lib.removeSuffix "3" versions.versionCode}2";
       gradleTask = "assembleAndroidFullOpenglX86Release";
     };
   };
@@ -75,6 +75,7 @@ let
   # core/externals is the mirror's, core-legacy/externals is ours; neither reads android/.
   externals = pkgs.callPackage ./externals.nix {
     src = srcCoreLegacy;
+    inherit versions;
     hashes = hashes.externals;
   };
 
@@ -95,6 +96,16 @@ let
   androidSdk = androidComposition.androidsdk;
   sdkRoot = "${androidSdk}/libexec/android-sdk";
   ndkRoot = "${sdkRoot}/ndk/${versions.ndkVersion}";
+
+  # Maven resolution needs the app platform, but no native compiler or emulator.
+  dependencySdk =
+    (pkgs.androidenv.composeAndroidPackages {
+      platformVersions = [ versions.compileSdk ];
+      buildToolsVersions = [ versions.buildToolsVersion ];
+      includeNDK = false;
+      includeCmake = false;
+      toolsVersion = null;
+    }).androidsdk;
 
   # Shared by every derivation that shells out to OsmAnd's own build scripts.
   androidEnv = {
@@ -118,7 +129,7 @@ let
   # configuration created at task-execution time, which nixDownloadDeps cannot see and so
   # never lands in deps.json. The SDK's build-tools already ship the binary — point AGP at
   # it and the download disappears entirely.
-  gradleProps = ''
+  mkGradleProps = sdkRoot: ''
     {
       echo "org.gradle.daemon=false"
       echo "org.gradle.console=plain"
@@ -136,6 +147,9 @@ let
       } >> "$GRADLE_USER_HOME/gradle.properties"
     fi
   '';
+
+  gradleProps = mkGradleProps sdkRoot;
+  dependencyGradleProps = mkGradleProps "${dependencySdk}/libexec/android-sdk";
 
   # Everything that depends on the ABI, built per variant.
   #
@@ -216,6 +230,8 @@ let
           mpchart
           icu4j
           androidSdk
+          dependencySdk
+          dependencyGradleProps
           sdkRoot
           ndkRoot
           regionsOcbf

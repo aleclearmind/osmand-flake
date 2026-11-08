@@ -18,11 +18,11 @@
     #
     # ./local.sh wraps exactly that: `./local.sh build .#route`, `./local.sh run .#transit -- ...`
     osmand-android = {
-      url = "github:aleclearmind/OsmAnd/osmand-flake-5.3.10";
+      url = "github:aleclearmind/OsmAnd/osmand-flake-5.4.11";
       flake = false;
     };
     osmand-core-legacy = {
-      url = "github:aleclearmind/OsmAnd-core-legacy/osmand-flake-5.3.10";
+      url = "github:aleclearmind/OsmAnd-core-legacy/osmand-flake-5.4.11";
       flake = false;
     };
   };
@@ -55,6 +55,7 @@
         pkgs.runCommand "osmand-${osmand.versions.versionName}-${abi}.apk"
           {
             __structuredAttrs = true;
+            passthru = { inherit (package) mitmCache; };
             ci = [
               { action = "sign-apk"; }
               { action = "release"; }
@@ -146,6 +147,36 @@
       devShells.${system}.default = osmand.shell;
 
       apps.${system} = {
+        # The Maven lock is shared with the native wrappers and MPAndroidChart.
+        # Refresh the app without deleting entries those independent builds use.
+        update-deps = {
+          type = "app";
+          program = "${
+            pkgs.writeShellApplication {
+              name = "update-osmand-deps";
+              runtimeInputs = [
+                pkgs.coreutils
+                pkgs.jq
+              ];
+              text = ''
+                backup=$(mktemp)
+                merged=$(mktemp)
+                cp nix/deps.json "$backup"
+                complete=0
+                cleanup() {
+                  if [ "$complete" -eq 0 ]; then cp "$backup" nix/deps.json; fi
+                  rm -f "$backup" "$merged"
+                }
+                trap cleanup EXIT
+                ${apk.mitmCache.updateScript}
+                jq --sort-keys --indent 1 --slurp '.[0] * .[1]' "$backup" nix/deps.json > "$merged"
+                mv "$merged" nix/deps.json
+                complete=1
+              '';
+            }
+          }/bin/update-osmand-deps";
+        };
+
         # Regenerate nix/externals-hashes.json after bumping OsmAnd
         update-hashes = {
           type = "app";
