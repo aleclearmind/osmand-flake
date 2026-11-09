@@ -20,6 +20,7 @@
   jdk21,
   androidSdk,
   sdkRoot,
+  gradleProps,
   ant,
   zip,
   unzip,
@@ -105,22 +106,7 @@ stdenv.mkDerivation (finalAttrs: {
     install -Dm644 ${regionsOcbf} \
       android/OsmAnd-java/src/main/resources/net/osmand/map/regions.ocbf
 
-    {
-      echo "org.gradle.daemon=false"
-      echo "org.gradle.console=plain"
-      echo "android.aapt2FromMavenOverride=${sdkRoot}/build-tools/${versions.buildToolsVersion}/aapt2"
-    } >> "$GRADLE_USER_HOME/gradle.properties"
-
-    if [ -n "''${MITM_CACHE_CA-}" ]; then
-      {
-        echo "systemProp.http.proxyHost=$MITM_CACHE_HOST"
-        echo "systemProp.http.proxyPort=$MITM_CACHE_PORT"
-        echo "systemProp.https.proxyHost=$MITM_CACHE_HOST"
-        echo "systemProp.https.proxyPort=$MITM_CACHE_PORT"
-        echo "systemProp.javax.net.ssl.trustStore=$MITM_CACHE_KEYSTORE"
-        echo "systemProp.javax.net.ssl.trustStorePassword=$MITM_CACHE_KS_PWD"
-      } >> "$GRADLE_USER_HOME/gradle.properties"
-    fi
+    ${gradleProps}
   '';
 
   buildPhase = ''

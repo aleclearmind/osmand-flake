@@ -45,7 +45,7 @@ Both native cores are compiled from source: the OpenGL core
 ## Build times
 
 The build is split so that editing Java cannot invalidate Qt. Measured on a
-12-core box, everything cold:
+12-core box for 5.3.10, everything cold:
 
 | `nix build .#…` | | |
 |---|---|---|
@@ -95,17 +95,26 @@ to be pinned so the sandbox needs no network.
 |---|---|
 | `core/externals/*/configure.sh` (Qt, Skia, GDAL, Boost, ICU4C, proj…) | 19 FODs, `nix/hashes.json` |
 | `core-legacy/externals/*/configure.sh` | 5 more FODs |
-| Gradle/Maven artifacts | `nix/deps.json`, replayed by `mitm-cache` |
+| app/CLI Gradle/Maven artifacts | `nix/deps.json`, replayed by `mitm-cache` |
+| native-wrapper/MPAndroidChart artifacts | `nix/core-deps.json`, kept stable across app dependency updates |
 | `World_basemap_mini_2.obf`, `stars.db.gz` | `fetchurl`, pinned |
 | `regions.ocbf` | **vendored** — see below |
 | `sdkmanager "platforms;android-31"` | provided by `androidenv` |
 
-Regenerate the two lockfiles after a version bump:
+Refresh the external hashes and app dependency lock after a version bump:
 
 ```
-nix run .#update-hashes                              # nix/hashes.json
-nix run .#update-deps                              # nix/deps.json
+nix run .#update-hashes    # nix/hashes.json
+nix run .#update-deps      # nix/deps.json
 ```
+
+`update-deps` resolves the root tooling configurations, the app, and its Java,
+shared Kotlin, and API modules. It
+merges the capture with existing entries so dependencies of independent builds
+are retained. `nix/core-deps.json` is a separate snapshot for the native wrappers
+and MPAndroidChart: changes to the app lock do not rebuild Qt. If a dependency
+update also affects those builds, refresh their snapshot with
+`cp nix/deps.json nix/core-deps.json` and rebuild the cores and chart library.
 
 `regions.ocbf` is the one input that cannot be pinned by hash: `builder.osmand.net`
 regenerates it daily and serves every generation from the same URL, so a `fetchurl`
@@ -198,6 +207,42 @@ git clone https://github.com/osmandapp/OsmAnd-core-legacy.git ../osmand-core-leg
 
 It uses `git+file:`, so nix sees tracked files only — `git add` a new file before it can be built,
 but committing is not required. Set `$OSMAND_ANDROID` / `$OSMAND_CORE_LEGACY` to point elsewhere.
+
+## Measuring map redraws
+
+`benchmark-zoom.py` drives the zoom buttons around central Milan (45.4642, 9.1900)
+through levels 14–17. Install the Lombardia offline map first and dismiss onboarding.
+For native symbol-loading times, enable the `debug_rendering` preference and restart
+OsmAnd; without it, the script still records displayed-frame timestamps.
+
+```sh
+python3 benchmark-zoom.py --serial emulator-5554 \
+  --package io.github.aleclearmind.osmand --output /tmp/milan-public
+```
+
+Pass another build's application ID to compare variants.
+
+On a rooted emulator, add `--verify-viewport` to check the actual coordinates and
+zoom through the saved app settings before and after the run. The script starts
+a fresh activity for the target location and saves a final screenshot.
+
+The output includes raw SurfaceFlinger timestamps, native timing logs, the APK's
+package metadata, and JSON measurements. Native `FINISH` measures symbol loading;
+it is separate from animation frame intervals and command-to-finish latency.
+For the 2D engine, `legacy_renders` records map search and bitmap rendering
+durations (rounded to 10 ms in the source logs), separately from frame timing.
+The requested levels are surface zoom; the native log records flat camera zoom,
+which can differ even when the requested zoom was reached.
+Compare runs with the same map, viewport, density, renderer, and idle host. A 60 Hz
+screen has a 16.7 ms frame budget. Software graphics measurements do not establish
+phone GPU performance.
+
+`run-emulator.sh` lets the emulator select hardware when a GPU device is accessible,
+and uses SwiftShader otherwise. Set `OSMAND_GPU_MODE=host` or
+`OSMAND_GPU_MODE=swiftshader` to make the backend explicit during comparisons.
+KVM accelerates the emulated CPU; graphics acceleration needs a separate GPU
+device. On CPU-only emulators, compare **Settings → OsmAnd settings → Map rendering
+engine → Version 1** as a 2D fallback. Restart the app after changing the engine.
 
 ## The ring-route plugin
 

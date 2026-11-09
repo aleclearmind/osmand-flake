@@ -27,7 +27,7 @@ stdenv.mkDerivation (
 
     mitmCache = gradle.fetchDeps {
       pkg = finalAttrs.finalPackage;
-      data = ./deps.json;
+      data = ./core-deps.json;
     };
 
     dontUseGradleBuild = true;

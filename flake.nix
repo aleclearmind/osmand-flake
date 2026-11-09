@@ -147,8 +147,8 @@
       devShells.${system}.default = osmand.shell;
 
       apps.${system} = {
-        # The Maven lock is shared with the native wrappers and MPAndroidChart.
-        # Refresh the app without deleting entries those independent builds use.
+        # Preserve existing lock entries while recording the app and its shared
+        # modules. The native wrappers use a separate, stable core-deps.json.
         update-deps = {
           type = "app";
           program = "${

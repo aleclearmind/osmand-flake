@@ -97,11 +97,12 @@ let
   sdkRoot = "${androidSdk}/libexec/android-sdk";
   ndkRoot = "${sdkRoot}/ndk/${versions.ndkVersion}";
 
-  # Maven resolution needs the app platform, but no native compiler or emulator.
+  # Maven resolution includes shared Android modules, which still target API 35.
+  # Supply their SDK components too, without a native compiler or emulator.
   dependencySdk =
     (pkgs.androidenv.composeAndroidPackages {
-      platformVersions = [ versions.compileSdk ];
-      buildToolsVersions = [ versions.buildToolsVersion ];
+      platformVersions = [ versions.compileSdk ] ++ versions.extraPlatforms;
+      buildToolsVersions = [ versions.buildToolsVersion ] ++ versions.extraBuildTools;
       includeNDK = false;
       includeCmake = false;
       toolsVersion = null;
@@ -130,6 +131,11 @@ let
   # never lands in deps.json. The SDK's build-tools already ship the binary — point AGP at
   # it and the download disappears entirely.
   mkGradleProps = sdkRoot: ''
+    # AGP creates analytics/preferences state even for offline builds. The Nix
+    # builder's home is read-only; keep Android's state in this build directory.
+    export ANDROID_USER_HOME="$TMPDIR/android-user-home"
+    mkdir -p "$ANDROID_USER_HOME"
+
     {
       echo "org.gradle.daemon=false"
       echo "org.gradle.console=plain"
@@ -302,6 +308,7 @@ let
           androidSdk
           sdkRoot
           regionsOcbf
+          gradleProps
           ;
         jdk21 = pkgs.jdk21;
       }

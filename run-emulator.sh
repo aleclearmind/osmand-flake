@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Boot the AVD headless. SwiftShader because there is no GPU/X here — the OpenGL core
-# still gets real GLES, just on the CPU.
+# Boot the AVD headless. Let the emulator choose the graphics backend when a
+# GPU device is accessible; use SwiftShader otherwise.
+# OSMAND_GPU_MODE can select a backend explicitly (for example host or swiftshader).
 #
 # The SDK is resolved through the flake rather than hardcoded: `nix store gc` collects any
 # store path nothing roots, and a dead absolute path here fails in a way that reads like a
@@ -24,7 +25,17 @@ SDK="$(nix build "${NIX_OVERRIDES[@]}" "$ROOT#emulatorSdk" --out-link "$ROOT/gcr
 
 export ANDROID_SDK_ROOT=$SDK ANDROID_HOME=$SDK
 export ANDROID_AVD_HOME="$ROOT/.avd"
+gpu="${OSMAND_GPU_MODE:-}"
+if [ -z "$gpu" ]; then
+  gpu=swiftshader
+  for device in /dev/dri/renderD* /dev/nvidia[0-9]*; do
+    if [ -r "$device" ] && [ -w "$device" ]; then
+      gpu=auto
+      break
+    fi
+  done
+fi
 exec "$SDK/emulator/emulator" -avd osmand \
   -no-window -no-audio -no-boot-anim -no-snapshot \
-  -gpu swiftshader_indirect -memory 4096 \
+  -gpu "$gpu" -memory 4096 \
   -accel on -qemu -smp 4

@@ -69,7 +69,9 @@ stdenv.mkDerivation (
         ANDROID_NDK_HOME = "";
         ANDROID_NDK_ROOT = "";
         preBuild = dependencyGradleProps;
-        gradleUpdateTask = "-p android/OsmAnd nixDownloadDeps";
+        # The root holds detached AGP tooling; subprojects hold non-transitive
+        # compiler plugins (notably Kotlin serialization in OsmAnd-shared).
+        gradleUpdateTask = "-I ${./tooling-deps.gradle} -p android/OsmAnd :nixDownloadDeps :OsmAnd:nixDownloadDeps :OsmAnd-java:nixDownloadDeps :OsmAnd-shared:nixDownloadDeps :OsmAnd-api:nixDownloadDeps";
       });
       data = ./deps.json;
     };

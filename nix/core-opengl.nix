@@ -54,7 +54,8 @@ stdenv.mkDerivation (
 
     mitmCache = gradle.fetchDeps {
       pkg = finalAttrs.finalPackage;
-      data = ./deps.json;
+      # App/compiler dependency updates must not rebuild Qt and the native core.
+      data = ./core-deps.json;
     };
 
     dontUseGradleBuild = true;

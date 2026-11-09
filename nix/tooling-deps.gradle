@@ -1,0 +1,16 @@
+import org.gradle.api.attributes.Usage
+import org.gradle.api.attributes.java.TargetJvmEnvironment
+
+// AGP's lint/annotation tools run on the build JVM. Mirror that consumer here:
+// without attributes, newer Guava exposes equally valid Android/JRE and API/runtime
+// variants, so the dependency-only capture cannot choose one.
+gradle.projectsEvaluated {
+    def root = gradle.rootProject
+    root.configurations.matching { it.name.startsWith('nixDetachedDeps') }.configureEach {
+        attributes {
+            attribute(Usage.USAGE_ATTRIBUTE, root.objects.named(Usage, Usage.JAVA_RUNTIME))
+            attribute(TargetJvmEnvironment.TARGET_JVM_ENVIRONMENT_ATTRIBUTE,
+                root.objects.named(TargetJvmEnvironment, TargetJvmEnvironment.STANDARD_JVM))
+        }
+    }
+}
