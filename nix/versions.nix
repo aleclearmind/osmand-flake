@@ -1,17 +1,17 @@
 # Everything that identifies *which* OsmAnd we build.
-# Mirrors the last Builds: entry of
+# Mirrors the latest non-beta Builds: entry of
 # https://gitlab.com/fdroid/fdroiddata/-/blob/master/metadata/net.osmand.plus.yml
 {
   # F-Droid builds from a mirror that pins all of OsmAnd's repos as submodules.
   repo = "https://gitlab.com/f-droid-mirrors/OsmAnd-submodules.git";
-  tag = "v5.4.11";
+  tag = "v5.4.10";
 
-  versionName = "5.4.11";
+  versionName = "5.4.10";
 
   # versionCode*100 + 1/2/3 for split ABI (armv7/x86/arm64), per MaintainerNotes.
   # Overridden per-ABI in nix/default.nix; the x86 flavour carries x86 *and* x86_64
   # (build-common.gradle abiFilters), which is what an x86_64 emulator needs.
-  versionCode = "541103";
+  versionCode = "541003";
   abi = "arm64";
 
   # gradle: [android, full, opengl, arm64] -> flavours androidFull + opengl + arm64

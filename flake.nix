@@ -18,11 +18,11 @@
     #
     # ./local.sh wraps exactly that: `./local.sh build .#route`, `./local.sh run .#transit -- ...`
     osmand-android = {
-      url = "github:aleclearmind/OsmAnd/osmand-flake-5.4.11";
+      url = "github:aleclearmind/OsmAnd/osmand-flake-5.4.10";
       flake = false;
     };
     osmand-core-legacy = {
-      url = "github:aleclearmind/OsmAnd-core-legacy/osmand-flake-5.4.11";
+      url = "github:aleclearmind/OsmAnd-core-legacy/osmand-flake-5.4.10";
       flake = false;
     };
   };

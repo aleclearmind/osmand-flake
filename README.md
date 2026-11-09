@@ -4,7 +4,7 @@ OsmAnd built the way F-Droid builds it, hermetically, from a Nix flake — plus 
 **ring route** plugin that plans a closed-loop walk under constraints.
 
 ```
-nix build .#apk          # OsmAnd~~ 5.4.11, arm64/OpenGL, unsigned APK
+nix build .#apk          # OsmAnd~~ 5.4.10, arm64/OpenGL, unsigned APK
 nix build .#looproute    # headless ring-route planner (no Android needed)
 nix run   .#route        # headless router: road, transit, GPX-approx (Java + native)
 nix develop              # the exact toolchain F-Droid uses
@@ -17,16 +17,17 @@ CI signing and release-key setup are delegated to
 
 The recipe is a faithful port of
 [`metadata/net.osmand.plus.yml`](https://gitlab.com/fdroid/fdroiddata/-/blob/master/metadata/net.osmand.plus.yml),
-last `Builds:` entry:
+stable 5.4.10 `Builds:` entry:
 
-The pinned release is **5.4.11**, the newest version distributed by F-Droid as of
-2026-11-08. F-Droid marks it as beta and still recommends 5.4.10.
+The pinned release is **5.4.10**, the latest non-beta version distributed and
+recommended by F-Droid as of 2026-11-09. The newer 5.4.11 beta is deliberately
+excluded.
 
 | | |
 |---|---|
-| source | `gitlab.com/f-droid-mirrors/OsmAnd-submodules` @ `v5.4.11` (`0bcbf3d414fb47fd574be37b70697121257a952b`, submodules) |
+| source | `gitlab.com/f-droid-mirrors/OsmAnd-submodules` @ `v5.4.10` (`1576850f57b08a21e8a6c2701eb3901dba7f4aa9`, submodules) |
 | …except | `android` → `aleclearmind/OsmAnd`, `core-legacy` → `aleclearmind/OsmAnd-core-legacy` |
-| variant | `assembleAndroidFullOpenglArm64Release` (versionCode **541103**) |
+| variant | `assembleAndroidFullOpenglArm64Release` (versionCode **541003**) |
 | NDK | r28c (`28.2.13676358`) |
 | app toolchain | Android API/build-tools 36, AGP 8.10.1, Kotlin 2.1.20, JDK 21 |
 | steps | F-Droid's `rm:` → `prebuild.sh` → `build.sh` → `gradle` |
@@ -150,8 +151,8 @@ still comes from the mirror at the tag.
 
 | | fork | holds |
 |---|---|---|
-| `osmand-android` | `aleclearmind/OsmAnd` @ `osmand-flake-5.4.11` | the app, `OsmAnd-java`, the ring-route plugin, the routing CLI |
-| `osmand-core-legacy` | `aleclearmind/OsmAnd-core-legacy` @ `osmand-flake-5.4.11` | `libosmand.so` — the native router the app and the CLI both load |
+| `osmand-android` | `aleclearmind/OsmAnd` @ `osmand-flake-5.4.10` | the app, `OsmAnd-java`, the ring-route plugin, the routing CLI |
+| `osmand-core-legacy` | `aleclearmind/OsmAnd-core-legacy` @ `osmand-flake-5.4.10` | `libosmand.so` — the native router the app and the CLI both load |
 
 Both branches are cut from the exact commits the mirror pins, so an untouched fork builds the same
 bytes F-Droid would — which is what makes "did our fork break it?" a question with an answer.
