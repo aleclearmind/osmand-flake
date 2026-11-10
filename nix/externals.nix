@@ -99,6 +99,9 @@ let
 
       SSL_CERT_FILE = "${cacert}/etc/ssl/certs/ca-bundle.crt";
       GIT_SSL_CAINFO = "${cacert}/etc/ssl/certs/ca-bundle.crt";
+      # Archive owners may be outside a container's UID/GID mapping. Source
+      # extraction only needs the files, owned by the current build user.
+      TAR_OPTIONS = "--no-same-owner";
 
       # Where this belongs inside the source tree, for the build to drop it back.
       passthru.targetPath = "${dir}/${name}";
