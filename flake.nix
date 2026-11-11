@@ -50,6 +50,31 @@
         coreLegacySrc = osmand-core-legacy;
       };
 
+      mkVersionedApk =
+        abiIndex: builder:
+        { lastModified ? self.lastModified, ... }@args:
+        let
+          # UTC minutes since 2026-01-01, with one bit for x86 = 0 / ARM64 = 1.
+          # Clean release commits must advance to a later minute and use committed
+          # input locks. Consumers pass their own flake's timestamp so plugin-only
+          # changes get a new code without updating this shared flake.
+          releaseMinutes = builtins.div (lastModified - 1767225600) 60;
+          versionCode = releaseMinutes * 2 + abiIndex;
+          package = builder (builtins.removeAttrs args [ "lastModified" ]);
+        in
+        assert versionCode > 0 && versionCode <= 2147483647;
+        package.overrideAttrs (old: {
+          # Change only the APK, retaining the prepared sources and native dependencies.
+          # CI signs this output without rewriting its manifest.
+          postPatch = old.postPatch + ''
+            echo 'android.defaultConfig.versionCode = ${toString versionCode}' \
+              >> android/OsmAnd/build.gradle
+          '';
+        });
+
+      mkApk = mkVersionedApk 1 osmand.mkApk;
+      mkApkX86 = mkVersionedApk 0 osmand.mkApkX86;
+
       ciApk =
         abi: package:
         pkgs.runCommand "osmand-${osmand.versions.versionName}-${abi}.apk"
@@ -79,8 +104,8 @@
           ci = [ { action = "run"; } ];
         });
 
-      apk = ciApk "arm64-v8a" osmand.apk;
-      apk-x86 = ciApk "x86_64" osmand.apk-x86;
+      apk = ciApk "arm64-v8a" (mkApk { });
+      apk-x86 = ciApk "x86_64" (mkApkX86 { });
       routeTest = ciRun osmand.routeTest;
       transitTest = ciRun osmand.transitTest;
     in
@@ -134,6 +159,7 @@
       # flake's store paths, so they never rebuild Qt.
       #
       #   osmand-flake.lib.x86_64-linux.mkApk {
+      #     lastModified = self.lastModified;
       #     appName = "OsmAnd~~~";
       #     applicationId = "io.github.example.osmand.myplugin";
       #     plugins = [ { src = ./plugin; class = "net.osmand.plus.plugins.mine.MyPlugin"; } ];
@@ -141,7 +167,8 @@
       #
       # Consume this flake's nixpkgs (do not declare your own, or none of the above is cached).
       lib.${system} = {
-        inherit (osmand) mkApk mkApkX86 mkJavaCli;
+        inherit mkApk mkApkX86;
+        inherit (osmand) mkJavaCli;
       };
 
       devShells.${system}.default = osmand.shell;
